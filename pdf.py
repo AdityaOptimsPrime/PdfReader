@@ -184,7 +184,6 @@ def densoPdf(filePath):
                         item_shipped_dict[item_no] = int(shipped)
             else:
                 st.write(f"Page {page_number} contains no extractable text.")
-    # st.write(item_shipped_dict)
 
     with pdfp.open(filePath) as pdf:
         for page in pdf.pages:
@@ -208,7 +207,6 @@ def densoPdf(filePath):
     invoice=re.search(invoicePattern,text)
     if invoice:
         invoice=invoice.group(1)
-    st.write(invoice)
     
     return invoice,invoiceDate[0],customerPoNo[0],item_shipped_dict
 
@@ -271,6 +269,24 @@ def addToExcel (*args):
     # conn.update(data=updated_data)
     # st.dataframe(data)
 
+def download(filename):
+    df=pd.read_excel("Data.xlsx")
+    csv = df.to_csv(index=False)
+    st.download_button(
+            label="Download Extracted Data as CSV",
+            data=csv,
+            file_name=filename,
+            mime="text/csv",
+        )
+
+def deleteData():
+        workbook = xl.load_workbook("Data.xlsx")
+        sheet = workbook.active  # Select the active sheet
+        for row in sheet.iter_rows(min_row=2):  # Skip the header row (row 1)
+            for cell in row:
+                cell.value = None  # Clear the cell's value
+        workbook.save("Data.xlsx")  # Save the updated Excel file 
+
 def get_page_count(pdf_file):
     # Load the PDF file
     reader = pPyPDFReaderdf.PdfReader(pdf_file)
@@ -285,13 +301,10 @@ uploadedFile = st.file_uploader("Upload your PDFs...", type=["pdf"], accept_mult
 if uploadedFile is not None:
     st.write("PDF Uploaded Successfully")
 
-submit1 = st.button("Click to add data in spreed sheet")
 apt = st.button("Click to add data of APT vendor")
 bando = st.button("Click to add data of bando vendor")
 bestBuy = st.button("Click to add data of Best Buy Distributor-new vendor")
 denso = st.button("Click to add data of DENSO vendor")
-
-
 
 if bando:
     if uploadedFile is not None:
@@ -328,6 +341,7 @@ if bestBuy:
 
 
 if denso:
+    deleteData()
     if uploadedFile is not None:
         for uploadedFile1 in uploadedFile:
             with open("temp.pdf","wb") as f:
@@ -335,3 +349,4 @@ if denso:
             data1,data2,data3,itemMap=densoPdf("temp.pdf")
             for key, value in itemMap.items():
                 addToExcel(data1,data2,data3,key, value)
+    download("Denso.csv")
