@@ -5,7 +5,6 @@ import re
 import pdfplumber as pdfp
 import pandas as pd
 import camelot
-from streamlit_gsheets import GSheetsConnection
 
 
 url="https://docs.google.com/spreadsheets/d/1xZvNRfY2fq6ixt8qDhymX1drmtQkJAXV1-7kHlpydJY/edit?usp=sharing"

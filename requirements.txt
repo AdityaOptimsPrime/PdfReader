@@ -1,0 +1,4 @@
+PyPDF2
+camelot
+pdfplumber
+openpyxl
