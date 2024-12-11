@@ -5,9 +5,10 @@ import re
 import pdfplumber as pdfp
 import pandas as pd
 import camelot
+import os
 
-
-url="https://docs.google.com/spreadsheets/d/1xZvNRfY2fq6ixt8qDhymX1drmtQkJAXV1-7kHlpydJY/edit?usp=sharing"
+if not os.path.exists("Data.xlsx"):
+    raise FileNotFoundError("The file 'Data.xlsx' does not exist.")
 
 
 def aptPdf(filePath):
@@ -210,46 +211,104 @@ def densoPdf(filePath):
     
     return invoice,invoiceDate[0],customerPoNo[0],item_shipped_dict
 
-def extractText(filePath):
-    with open(filePath,'rb') as file:
-        pdfReader=pPyPDFReaderdf.PdfReader(file)
-        pageNumber= len(pdfReader.pages)
-        text=""
-        for page_num in range(pageNumber):
-            page=pdfReader.pages[page_num]
-            text+=page.extract_text()
-            st.write(text)
-    # poNoPattern = r"P.O.No:\s*(\d{9})"
-    # invoiceDatePattern = r"Due Date\s*(\d{1,2}/\d{1,2}/\d{2})"
-    # invoiceNoPattern = r"Invoice\s*(\d+-\d+)"
-   
-    # # poNo = re.search(poNoPattern, text)
-    # invoiceDate = re.search(invoiceDatePattern, text)
-    # invoiceNo = re.search(invoiceNoPattern, text)
-    # # st.write(poNo)
-    # st.write(invoiceDate)
-    # st.write(invoiceNo)
-    # if invoiceDate and invoiceNo:
-    #     # poNo = poNo.group(1)
-    #     invoiceDate = invoiceDate.group(1)
-    #     invoiceNo=invoiceNo.group(1)
-       
-    #     return invoiceDate,invoiceNo
-    # else:
-    #     return  None,None
+def fcsPdf(filePath1):
+    tables = camelot.read_pdf(filepath=filePath1, flavor='stream', pages='all')
+    allDicts = []
+    Po = None
+    for i, table in enumerate(tables):
+        df = table.df
+        if i == 0:
+            continue
+
+        if df.shape[1] >= 3:
+            df = df[[df.columns[1], df.columns[3]]]
+            df.columns = ['Shipped', 'Item']
+            df = df[
+                (df['Shipped'] != 'Shipped') &  
+                (df['Item'] != 'Item') &       
+                (df['Shipped'] != '') &        
+                (df['Item'] != '') &           
+                (~df['Item'].str.contains("Unnamed", na=False))
+            ]
+            if i == 1:
+                df = df.iloc[1:]
+            data_dict = dict(zip(df['Item'], df['Shipped']))
+            allDicts.append(data_dict)
+        if i == 1:
+            Po = df.iloc[1, 1] 
+    with open(filePath1, 'rb') as file:
+        pdfReader = pPyPDFReaderdf.PdfReader(file)
+        text = ""
+        for page_num in range(len(pdfReader.pages)):
+            page = pdfReader.pages[page_num]
+            text += page.extract_text()
+            break  
+    invoice_pattern = r"#INV\d+"  
+    date_pattern = r"\d{1,2}/\d{1,2}/\d{4}"
+    invoiceMatches = re.findall(invoice_pattern, text)
+    dateMatches = re.findall(date_pattern, text)
+
+    invoice = invoiceMatches[0] if invoiceMatches else "N/A"
+    date = dateMatches[0] if dateMatches else "N/A"
+    return invoice, date, Po, allDicts
+
+
+def gmbPdf(filePath1):
+    tables = camelot.read_pdf(filepath=filePath1, flavor='stream', pages='all')
+    allDicts = []
+    for i, table in enumerate(tables):
+        df = table.df
+        if i==0:
+            invoiceNo=df.iloc[2,1]
+            invoiceDate=df.iloc[4,1]
+            continue
+        if df.shape[1] >= 6: 
+            df.columns = [f"col_{i}" for i in range(df.shape[1])]
+            filtered_df = df.loc[4:, ['col_2', 'col_3']] 
+            filtered_df.columns = ['Shipped', 'Part Number']
+            filtered_df = filtered_df[
+                (filtered_df['Shipped'] != '') & (filtered_df['Part Number'] != '') 
+                & (~filtered_df['Part Number'].str.contains("Subtotal|TOTAL", na=False)) 
+            ]
+            data_dict = dict(zip(filtered_df['Part Number'], filtered_df['Shipped']))
+            allDicts.append(data_dict)
     
+    with open(filePath1, 'rb') as file:
+        pdfReader = pPyPDFReaderdf.PdfReader(file)
+        text = ""
+        for page_num in range(len(pdfReader.pages)):
+            page = pdfReader.pages[page_num]
+            text += page.extract_text()
+        pattern1 = r"FREIGHT PPD & ADDED\s*([\d.,]+)"
+        pattern2 = r"FREIGHT  PPD\s*([\d.,]+)"
+        PONumber=re.findall(pattern2,text)
+        if not PONumber:
+            PONumber=re.findall(pattern1,text)
+    return invoiceNo,invoiceDate,PONumber[0],allDicts
 
-def display_pdf_content(filePath):
 
-     with open(filePath, 'rb') as file:
-        pdf_reader = pPyPDFReaderdf(file)
-        num_pages = len(pdf_reader.pages)
-        text = []
-        for page_num in range(num_pages):
-            page = pdf_reader.pages[page_num]
-            page_text = page.extract_text()
-            text.append(page_text)
-        return text
+def g2sPdf(filePath1):
+    customer_po = None
+    items_dict = {}
+    with pdfp.open(filePath1) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            if not customer_po:
+                po_match = re.search(r"CONTACT\s+([A-Z\-]+)", text)
+                if po_match:
+                    customer_po = po_match.group(1).strip()
+            
+            table_matches = re.findall(r"(\b[A-Z0-9-]+:\s+[A-Z0-9]+\b).+?(\d+)\s+EA", text)
+            for item, qty in table_matches:
+                items_dict[item] = int(qty)
+
+    tables = camelot.read_pdf(filepath=filePath1, flavor='stream', pages='all')
+    for i,table in enumerate(tables):
+        df = table.df
+        if i==0:
+            invoiceNo=df.iloc[1,2]
+            date=df.iloc[2,2]
+    return invoiceNo,date,customer_po,items_dict
 
 
 
@@ -302,51 +361,138 @@ if uploadedFile is not None:
     st.write("PDF Uploaded Successfully")
 
 apt = st.button("Click to add data of APT vendor")
-bando = st.button("Click to add data of bando vendor")
+bando = st.button("Click to add data of BANDO vendor")
 bestBuy = st.button("Click to add data of Best Buy Distributor-new vendor")
 denso = st.button("Click to add data of DENSO vendor")
+fcs = st.button("Click to add data of FCS Automotive vendor")
+gmb = st.button("Click to add data of GMB vendor")
+g2s = st.button("Click to add data of G2S vendor")
 
 if bando:
+    deleteData()
+    pdfName=[]
     if uploadedFile is not None:
         for uploadedFile1 in uploadedFile:
             with open("temp.pdf","wb") as f:
                 f.write(uploadedFile1.read())
-            count=get_page_count("temp.pdf")
-            PoNumber,invoiceDate,invoiceNo=comonBandoPdf("temp.pdf",count)
-            if count<2:
-                product_quantity_dict=bandoPdf("temp.pdf")
-            else:
-                product_quantity_dict=bandoPdf1("temp.pdf")
-            for i, product_quantity_dict in enumerate(product_quantity_dict, 1):
-                for key, value in product_quantity_dict.items():
-                    addToExcel(PoNumber,invoiceDate,invoiceNo,key,value)
+            try:
+                count=get_page_count("temp.pdf")
+                PoNumber,invoiceDate,invoiceNo=comonBandoPdf("temp.pdf",count)
+                if count<2:
+                    product_quantity_dict=bandoPdf("temp.pdf")
+                else:
+                    product_quantity_dict=bandoPdf1("temp.pdf")
+                for i, product_quantity_dict in enumerate(product_quantity_dict, 1):
+                    for key, value in product_quantity_dict.items():
+                        addToExcel(PoNumber,invoiceDate,invoiceNo,key,value)
+            except:
+                pdfName.append(uploadedFile.name)
+    download("BESTBUY.csv")
+    st.write(pdfName)
 
 if apt:
+    deleteData()
+    pdfName=[]
     if uploadedFile is not None:
-        with open("temp.pdf","wb") as f:
-            f.write(uploadedFile.read())
-        data1,data2,data3,itemMap=aptPdf("temp.pdf")
-        for key, value in itemMap.items():
-            addToExcel(data1,data2,data3,key, value)
+            for uploadedFile1 in uploadedFile:
+                with open("temp.pdf","wb") as f:
+                    f.write(uploadedFile1.read())
+                try:
+                    data1,data2,data3,itemMap=aptPdf("temp.pdf")
+                    for key, value in itemMap.items():
+                        addToExcel(data1,data2,data3,key, value)
+                except:
+                    pdfName.append(uploadedFile.name)
+    download("BESTBUY.csv")
+    st.write(pdfName)
 
 
 
 if bestBuy:
-    if uploadedFile is not None:
-        with open("temp.pdf","wb") as f:
-            f.write(uploadedFile.read())
-        poNo, invoiceDate,invoiceNo,shipPartList=bestBuyPdf("temp.pdf")
-        for ship_qty, part_number in shipPartList:
-            addToExcel(poNo, invoiceDate,invoiceNo, ship_qty, part_number)
-
-
-if denso:
     deleteData()
+    pdfName=[]
     if uploadedFile is not None:
         for uploadedFile1 in uploadedFile:
             with open("temp.pdf","wb") as f:
                 f.write(uploadedFile1.read())
-            data1,data2,data3,itemMap=densoPdf("temp.pdf")
-            for key, value in itemMap.items():
-                addToExcel(data1,data2,data3,key, value)
+            try:
+                poNo, invoiceDate,invoiceNo,shipPartList=bestBuyPdf("temp.pdf")
+                for ship_qty, part_number in shipPartList:
+                    addToExcel(poNo, invoiceDate,invoiceNo, ship_qty, part_number)
+            except:
+                pdfName.append(uploadedFile.name)
+    download("BESTBUY.csv")
+    st.write(pdfName)
+
+
+if denso:
+    deleteData()
+    pdfName=[]
+    if uploadedFile is not None:
+        for uploadedFile1 in uploadedFile:
+            with open("temp.pdf","wb") as f:
+                f.write(uploadedFile1.read())
+            try:
+                data1,data2,data3,itemMap=densoPdf("temp.pdf")
+                for key, value in itemMap.items():
+                    addToExcel(data1,data2,data3,key, value)
+            except:
+                pdfName.append(uploadedFile.name)
     download("Denso.csv")
+    st.write(pdfName)
+
+if fcs:
+    deleteData()
+    pdfName=[]
+    if uploadedFile is not None:
+        for uploadedFile1 in uploadedFile:
+            with open("temp.pdf","wb") as f:
+                f.write(uploadedFile1.read())
+            
+            try:
+                invoice, date, po, itemMap = fcsPdf("temp.pdf")
+                for itemDict in itemMap:
+                    for key, value in itemDict.items():
+                        addToExcel(invoice, date, po, key, value)
+            
+            except:
+                pdfName.append(uploadedFile.name)
+    download("FCS.csv")
+    st.write(pdfName)
+
+
+if gmb:
+    deleteData()
+    pdfName=[]
+    if uploadedFile is not None:
+        for uploadedFile1 in uploadedFile:
+            with open("temp.pdf", "wb") as f:
+                f.write(uploadedFile1.read())
+            try:
+                invoiceNo,invoiceDate,PONumber,itemMap=gmbPdf("temp.pdf")
+                
+                for itemDict in itemMap:
+                    for key, value in itemDict.items():
+                        addToExcel(invoiceNo,invoiceDate,PONumber, key, value)
+            except:
+                pdfName.append(uploadedFile.name)
+    download("GMB.csv")
+    st.write(pdfName)
+
+
+if g2s:
+    deleteData()
+    pdfName=[]
+    if uploadedFile is not None:
+        for uploadedFile1 in uploadedFile:
+            with open("temp.pdf", "wb") as f:
+                f.write(uploadedFile1.read())
+            try:
+                invoiceNo,invoiceDate,PONumber,itemMap=g2sPdf("temp.pdf")
+
+                for key, value in itemMap.items():
+                    addToExcel(invoiceNo,invoiceDate,PONumber, key, value)
+            except:
+                pdfName.append(uploadedFile.name)
+    download("G2S.csv")
+    st.write(pdfName)
