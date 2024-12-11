@@ -1,8 +1,7 @@
-PyPDF2==3.0.0
-camelot-py[cv]==0.10.1
-pdfplumber==0.9.0
-openpyxl==3.1.2
-xlrd==1.2.0
-opencv-python-headless
+PyPDF2==3.0.0; python_version >= "3.7" and python_version < "3.12"
+camelot-py[cv]==0.10.1; python_version >= "3.7" and python_version < "3.12"
+pdfplumber==0.9.0; python_version >= "3.7" and python_version < "3.12"
+openpyxl==3.1.2; python_version >= "3.7" and python_version < "3.12"
+xlrd==1.2.0; python_version >= "3.7" and python_version < "3.12"
+opencv-python-headless; python_version >= "3.7" and python_version < "3.12"
 streamlit
-python_version == "3.10"
