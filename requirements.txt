@@ -4,5 +4,5 @@ pdfplumber==0.9.0; python_version >= "3.7" and python_version < "3.12"
 openpyxl==3.1.2; python_version >= "3.7" and python_version < "3.12"
 xlrd==1.2.0; python_version >= "3.7" and python_version < "3.12"
 opencv-python-headless; python_version >= "3.7" and python_version < "3.12"
-opencv
-streamlit
+opencv-python; python_version >= "3.7" and python_version < "3.12"
+streamlit; python_version >= "3.7" and python_version < "3.12"
