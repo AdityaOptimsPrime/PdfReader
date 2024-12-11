@@ -4,3 +4,4 @@ pdfplumber
 openpyxl
 xlrd
 streamlit
+libgl
