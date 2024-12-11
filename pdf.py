@@ -329,7 +329,7 @@ def addToExcel (*args):
     # st.dataframe(data)
 
 def download(filename):
-    df=pd.read_excel("Data.xlsx")
+    df=pd.read_excel("Data.xlsx",engine="openpyxl")
     csv = df.to_csv(index=False)
     st.download_button(
             label="Download Extracted Data as CSV",
