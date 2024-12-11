@@ -3,4 +3,4 @@ camelot-py==0.8.0
 pdfplumber==0.9.0
 openpyxl==3.1.2
 xlrd==1.2.0
-pdftopng==0.1.0
+
