@@ -4,4 +4,5 @@ pdfplumber
 openpyxl
 xlrd
 streamlit
-libgl
+opencv-python
+opencv-python-headless
