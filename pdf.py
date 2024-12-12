@@ -29,8 +29,7 @@ def aptPdf(filePath):
         for i in file.pages:
             extracted_tables=i.extract_tables()
             table1.append(extracted_tables[2])
-            break
-        
+            break     
         
         itemName=[]
         itemQuantity=[]
@@ -55,23 +54,19 @@ def bandoPdf(filePath):
             tables.extend(extracted_tables)
 
         if tables:
-            last_table = tables[-1]  # Get the last table
-            df = pd.DataFrame(last_table)  # Convert it into a DataFrame
+            last_table = tables[-1]  
+            df = pd.DataFrame(last_table)  
             df1=df.iloc[1,2]
             df = df.iloc[:, [1, 8]]
             df = df.dropna()
             
             codeList = []
-            product_codes = df.iloc[1:, 0].tolist()  # Get the first column as a list
-            quantities = df.iloc[1:, 1].tolist()  # Get the second column as a list
-
-            # Iterate over product_codes and split each product code
+            product_codes = df.iloc[1:, 0].tolist()  
+            quantities = df.iloc[1:, 1].tolist()  
             for code in product_codes:
                 print(type(code))
                 split_code = code.split(" ")
-                codeList.append(split_code[0])  # Assuming you only want the first part (e.g., '6PK1145')
-
-            # Ensure that all elements in codeList are strings, not lists
+                codeList.append(split_code[0])  
             if any(isinstance(item, list) for item in codeList):
                 st.write("Error: codeList contains lists instead of strings")
                 return
@@ -86,20 +81,16 @@ def bandoPdf1(filePath1):
     allDicts = []
     for table in tables:
         df = table.df
-        # Identify the correct columns based on their headers
-        # Replace 'Product and Description' and 'Ship Qty' with their exact column names
-        # Remove blank rows if necessary and reset the index
         if df.shape[1]>=4:
-            df = df[[df.columns[1], df.columns[4]]]  # Adjust indices for correct columns
-            df.columns = ['Product and Description', 'Ship Qty']  # Rename columns for clarity
+            df = df[[df.columns[1], df.columns[4]]]  
+            df.columns = ['Product and Description', 'Ship Qty']  
             df = df[
                 (df['Product and Description'] != 'Product and Description') &
                 (df['Ship Qty'] != 'Ship Qty') &
                 (df['Product and Description'] != '') &
                 (df['Ship Qty'] != '')
             ]
-            st.write(df)
-            # Display the filtered data (or further process it)
+            
             data_dict = dict(zip(df['Product and Description'], df['Ship Qty']))
             allDicts.append(data_dict)
     return allDicts
@@ -115,11 +106,10 @@ def comonBandoPdf(filePath1,pageNumber):
         for page_num in range(pageNumber):
             page = pdfReader.pages[page_num]
             text += page.extract_text()
-    # Patterns for extracting invoice data
+    
     invoiceDatePattern = r"Due Date\s*(\d{1,2}/\d{1,2}/\d{2})"
     invoiceNoPattern = r"Invoice\s*(\d+-\d+)"
     
-    # Search for patterns in the extracted text
     invoiceDate = re.search(invoiceDatePattern, text)
     invoiceNo = re.search(invoiceNoPattern, text)
     
@@ -317,16 +307,7 @@ def addToExcel (*args):
     sheet = workbook.active
     sheet.append(args)
     workbook.save("Data.xlsx")
-    # conn = st.connection("gsheets", type=GSheetsConnection)
-    # data = conn.read(spreadsheet=url)
-    # new_row = pd.DataFrame([args], columns=data.columns)
     
-    # Concatenate the new row with the existing data
-    # updated_data = pd.concat([data, new_row], ignore_index=True)
-    
-    # Write the updated data back to the Google Sheet
-    # conn.update(data=updated_data)
-    # st.dataframe(data)
 
 def download(filename):
     df=pd.read_excel("Data.xlsx",engine="openpyxl")
@@ -387,7 +368,7 @@ if bando:
                         addToExcel(PoNumber,invoiceDate,invoiceNo,key,value)
             except:
                 pdfName.append(uploadedFile.name)
-    download("BESTBUY.csv")
+    download("Bando.csv")
     st.write(pdfName)
 
 if apt:
@@ -402,8 +383,8 @@ if apt:
                     for key, value in itemMap.items():
                         addToExcel(data1,data2,data3,key, value)
                 except:
-                    pdfName.append(uploadedFile.name)
-    download("BESTBUY.csv")
+                    pdfName.append(uploadedFile1.name)
+    download("APT.csv")
     st.write(pdfName)
 
 
