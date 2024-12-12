@@ -427,9 +427,6 @@ def display_pdf_content(filePath):
 def addToExcel (*args):
     workbook = xl.load_workbook("Data.xlsx")
     sheet = workbook.active
-    required_columns = ["invoiceNo", "invoiceDate", "PO", "item", "ship qty"]
-    if sheet.max_row == 0 or sheet.cell(row=1, column=1).value != required_columns[0]:
-        sheet.append(required_columns)
     sheet.append(args)
     workbook.save("Data.xlsx")
     # conn = st.connection("gsheets", type=GSheetsConnection)
