@@ -7,9 +7,80 @@ import pandas as pd
 import camelot
 import os
 
+
 if not os.path.exists("Data.xlsx"):
     raise FileNotFoundError("The file 'Data.xlsx' does not exist.")
 
+url="https://docs.google.com/spreadsheets/d/1xZvNRfY2fq6ixt8qDhymX1drmtQkJAXV1-7kHlpydJY/edit?usp=sharing"
+
+
+    # for table in tables:
+    #     df = table.df
+        
+    #     # Identify the correct columns based on their headers
+    #     # Replace 'Product and Description' and 'Ship Qty' with their exact column names
+    #     # Remove blank rows if necessary and reset the index
+    #     st.write(df)
+#    with pdfp.open(filePath) as file:
+#         tables = []
+#         for i in file.pages:
+#             extracted_tables = i.extract_tables()
+#             # table=i.extract_tables()[0][1][0]
+#             tables.extend(extracted_tables)
+#             st.write(tables)
+#         if tables:
+#             last_table = tables[3]  # Get the last table
+#             df = pd.DataFrame(last_table)
+#             st.write(df)
+    # with pdfp.open(filePath) as pdf1:
+    #     shipPartList = []
+        
+    #     for page in pdf1.pages:
+    #         text = page.extract_text()
+    #         st.write(text)
+    #         lines = text.split('\n')
+    #         shipPartList.extend(lines)
+    #         st.write(shipPartList)
+    #     df=pd.DataFrame(shipPartList)
+    #     st.write(df)
+            
+    
+
+        # if tables:
+        #     for table in tables:
+        #         # last_table = tables[-1]  # Get the last table
+        #         df = pd.DataFrame(tables)  # Convert it into a DataFrame
+        #         # df = df.iloc[:, [1, 8]]
+        #         st.write(df)
+        #         # df = df.dropna()
+            
+        #     codeList = []
+        #     product_codes = df.iloc[1:, 0].tolist()  # Get the first column as a list
+        #     quantities = df.iloc[1:, 1].tolist()  # Get the second column as a list
+
+        #     # Iterate over product_codes and split each product code
+        #     for code in product_codes:
+        #         print(type(code))
+        #         split_code = code.split(" ")
+        #         codeList.append(split_code[0])  # Assuming you only want the first part (e.g., '6PK1145')
+
+        #     # Ensure that all elements in codeList are strings, not lists
+        #     if any(isinstance(item, list) for item in codeList):
+        #         st.write("Error: codeList contains lists instead of strings")
+        #         return
+
+        #     # Creating a dictionary from the product codes and quantities
+        #     product_quantity_dict = dict(zip(codeList, quantities))
+
+        #     # Format the dictionary to a string like '6PK1145 = 2, 6PK2095 = 6'
+        #     formatted_output = ', '.join([f"{key} = {value}" for key, value in product_quantity_dict.items()])
+
+        #     # Display the output
+        #     st.write("Extracted Data: ", formatted_output)
+        # else:
+        #     st.write("No tables found in the PDF")
+    # for i in dataframes:
+    #     st.write(i)
 
 def aptPdf(filePath):
     with pdfp.open(filePath) as file:
@@ -29,7 +100,8 @@ def aptPdf(filePath):
         for i in file.pages:
             extracted_tables=i.extract_tables()
             table1.append(extracted_tables[2])
-            break     
+            break
+        
         
         itemName=[]
         itemQuantity=[]
@@ -54,19 +126,23 @@ def bandoPdf(filePath):
             tables.extend(extracted_tables)
 
         if tables:
-            last_table = tables[-1]  
-            df = pd.DataFrame(last_table)  
+            last_table = tables[-1]  # Get the last table
+            df = pd.DataFrame(last_table)  # Convert it into a DataFrame
             df1=df.iloc[1,2]
             df = df.iloc[:, [1, 8]]
             df = df.dropna()
             
             codeList = []
-            product_codes = df.iloc[1:, 0].tolist()  
-            quantities = df.iloc[1:, 1].tolist()  
+            product_codes = df.iloc[1:, 0].tolist()  # Get the first column as a list
+            quantities = df.iloc[1:, 1].tolist()  # Get the second column as a list
+
+            # Iterate over product_codes and split each product code
             for code in product_codes:
                 print(type(code))
                 split_code = code.split(" ")
-                codeList.append(split_code[0])  
+                codeList.append(split_code[0])  # Assuming you only want the first part (e.g., '6PK1145')
+
+            # Ensure that all elements in codeList are strings, not lists
             if any(isinstance(item, list) for item in codeList):
                 st.write("Error: codeList contains lists instead of strings")
                 return
@@ -81,16 +157,20 @@ def bandoPdf1(filePath1):
     allDicts = []
     for table in tables:
         df = table.df
+        # Identify the correct columns based on their headers
+        # Replace 'Product and Description' and 'Ship Qty' with their exact column names
+        # Remove blank rows if necessary and reset the index
         if df.shape[1]>=4:
-            df = df[[df.columns[1], df.columns[4]]]  
-            df.columns = ['Product and Description', 'Ship Qty']  
+            df = df[[df.columns[1], df.columns[4]]]  # Adjust indices for correct columns
+            df.columns = ['Product and Description', 'Ship Qty']  # Rename columns for clarity
             df = df[
                 (df['Product and Description'] != 'Product and Description') &
                 (df['Ship Qty'] != 'Ship Qty') &
                 (df['Product and Description'] != '') &
                 (df['Ship Qty'] != '')
             ]
-            
+            st.write(df)
+            # Display the filtered data (or further process it)
             data_dict = dict(zip(df['Product and Description'], df['Ship Qty']))
             allDicts.append(data_dict)
     return allDicts
@@ -106,10 +186,11 @@ def comonBandoPdf(filePath1,pageNumber):
         for page_num in range(pageNumber):
             page = pdfReader.pages[page_num]
             text += page.extract_text()
-    
+    # Patterns for extracting invoice data
     invoiceDatePattern = r"Due Date\s*(\d{1,2}/\d{1,2}/\d{2})"
     invoiceNoPattern = r"Invoice\s*(\d+-\d+)"
     
+    # Search for patterns in the extracted text
     invoiceDate = re.search(invoiceDatePattern, text)
     invoiceNo = re.search(invoiceNoPattern, text)
     
@@ -300,6 +381,47 @@ def g2sPdf(filePath1):
             date=df.iloc[2,2]
     return invoiceNo,date,customer_po,items_dict
 
+def extractText(filePath):
+    with open(filePath,'rb') as file:
+        pdfReader=pPyPDFReaderdf.PdfReader(file)
+        pageNumber= len(pdfReader.pages)
+        text=""
+        for page_num in range(pageNumber):
+            page=pdfReader.pages[page_num]
+            text+=page.extract_text()
+            st.write(text)
+    # poNoPattern = r"P.O.No:\s*(\d{9})"
+    # invoiceDatePattern = r"Due Date\s*(\d{1,2}/\d{1,2}/\d{2})"
+    # invoiceNoPattern = r"Invoice\s*(\d+-\d+)"
+   
+    # # poNo = re.search(poNoPattern, text)
+    # invoiceDate = re.search(invoiceDatePattern, text)
+    # invoiceNo = re.search(invoiceNoPattern, text)
+    # # st.write(poNo)
+    # st.write(invoiceDate)
+    # st.write(invoiceNo)
+    # if invoiceDate and invoiceNo:
+    #     # poNo = poNo.group(1)
+    #     invoiceDate = invoiceDate.group(1)
+    #     invoiceNo=invoiceNo.group(1)
+       
+    #     return invoiceDate,invoiceNo
+    # else:
+    #     return  None,None
+    
+
+def display_pdf_content(filePath):
+
+     with open(filePath, 'rb') as file:
+        pdf_reader = pPyPDFReaderdf(file)
+        num_pages = len(pdf_reader.pages)
+        text = []
+        for page_num in range(num_pages):
+            page = pdf_reader.pages[page_num]
+            page_text = page.extract_text()
+            text.append(page_text)
+        return text
+
 
 
 def addToExcel (*args):
@@ -307,10 +429,19 @@ def addToExcel (*args):
     sheet = workbook.active
     sheet.append(args)
     workbook.save("Data.xlsx")
+    # conn = st.connection("gsheets", type=GSheetsConnection)
+    # data = conn.read(spreadsheet=url)
+    # new_row = pd.DataFrame([args], columns=data.columns)
     
+    # Concatenate the new row with the existing data
+    # updated_data = pd.concat([data, new_row], ignore_index=True)
+    
+    # Write the updated data back to the Google Sheet
+    # conn.update(data=updated_data)
+    # st.dataframe(data)
 
 def download(filename):
-    df=pd.read_excel("Data.xlsx",engine="openpyxl")
+    df=pd.read_excel("Data.xlsx")
     csv = df.to_csv(index=False)
     st.download_button(
             label="Download Extracted Data as CSV",
@@ -342,12 +473,15 @@ if uploadedFile is not None:
     st.write("PDF Uploaded Successfully")
 
 apt = st.button("Click to add data of APT vendor")
-bando = st.button("Click to add data of BANDO vendor")
+bando = st.button("Click to add data of bando vendor")
 bestBuy = st.button("Click to add data of Best Buy Distributor-new vendor")
 denso = st.button("Click to add data of DENSO vendor")
 fcs = st.button("Click to add data of FCS Automotive vendor")
 gmb = st.button("Click to add data of GMB vendor")
 g2s = st.button("Click to add data of G2S vendor")
+
+
+
 
 if bando:
     deleteData()
@@ -367,8 +501,8 @@ if bando:
                     for key, value in product_quantity_dict.items():
                         addToExcel(PoNumber,invoiceDate,invoiceNo,key,value)
             except:
-                pdfName.append(uploadedFile.name)
-    download("Bando.csv")
+                pdfName.append(uploadedFile1.name)
+    download("BANDO.csv")
     st.write(pdfName)
 
 if apt:
@@ -393,16 +527,16 @@ if bestBuy:
     deleteData()
     pdfName=[]
     if uploadedFile is not None:
-        for uploadedFile1 in uploadedFile:
-            with open("temp.pdf","wb") as f:
-                f.write(uploadedFile1.read())
-            try:
-                poNo, invoiceDate,invoiceNo,shipPartList=bestBuyPdf("temp.pdf")
-                for ship_qty, part_number in shipPartList:
-                    addToExcel(poNo, invoiceDate,invoiceNo, ship_qty, part_number)
-            except:
-                pdfName.append(uploadedFile.name)
-    download("BESTBUY.csv")
+            for uploadedFile1 in uploadedFile:
+                with open("temp.pdf","wb") as f:
+                    f.write(uploadedFile1.read())
+                try:
+                    poNo, invoiceDate,invoiceNo,shipPartList=bestBuyPdf("temp.pdf")
+                    for ship_qty, part_number in shipPartList:
+                        addToExcel(poNo, invoiceDate,invoiceNo, ship_qty, part_number)
+                except:
+                    pdfName.append(uploadedFile1.name)
+    download("BestBuy.csv")
     st.write(pdfName)
 
 
@@ -418,7 +552,7 @@ if denso:
                 for key, value in itemMap.items():
                     addToExcel(data1,data2,data3,key, value)
             except:
-                pdfName.append(uploadedFile.name)
+                pdfName.append(uploadedFile1.name)
     download("Denso.csv")
     st.write(pdfName)
 
@@ -429,15 +563,13 @@ if fcs:
         for uploadedFile1 in uploadedFile:
             with open("temp.pdf","wb") as f:
                 f.write(uploadedFile1.read())
-            
             try:
                 invoice, date, po, itemMap = fcsPdf("temp.pdf")
                 for itemDict in itemMap:
                     for key, value in itemDict.items():
                         addToExcel(invoice, date, po, key, value)
-            
             except:
-                pdfName.append(uploadedFile.name)
+                pdfName.append(uploadedFile1.name)
     download("FCS.csv")
     st.write(pdfName)
 
@@ -457,9 +589,8 @@ if gmb:
                         addToExcel(invoiceNo,invoiceDate,PONumber, key, value)
             except:
                 pdfName.append(uploadedFile.name)
-    download("GMB.csv")
     st.write(pdfName)
-
+    download("GMB.csv")
 
 if g2s:
     deleteData()
@@ -475,5 +606,5 @@ if g2s:
                     addToExcel(invoiceNo,invoiceDate,PONumber, key, value)
             except:
                 pdfName.append(uploadedFile.name)
-    download("G2S.csv")
     st.write(pdfName)
+    download("g2s.csv")
