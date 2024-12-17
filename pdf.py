@@ -451,12 +451,12 @@ def download(filename):
         )
 
 def deleteData():
-        workbook = xl.load_workbook("Data.xlsx")
-        sheet = workbook.active  # Select the active sheet
-        for row in sheet.iter_rows(min_row=2):  # Skip the header row (row 1)
-            for cell in row:
-                cell.value = None  # Clear the cell's value
-        workbook.save("Data.xlsx")  # Save the updated Excel file 
+    workbook = xl.load_workbook("Data.xlsx")
+    sheet = workbook.active  # Select the active sheet
+    # Delete all rows including the header
+    sheet.delete_rows(1, sheet.max_row)  # Delete all rows starting from row 1
+    workbook.save("Data.xlsx")
+    workbook.close()  
 
 def get_page_count(pdf_file):
     # Load the PDF file
