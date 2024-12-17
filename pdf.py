@@ -249,7 +249,7 @@ def densoPdf(filePath):
             if text:
                 for line in text.split("\n"):
                     # Use regex to extract SHIPPED and ITEM NO. data
-                    match = re.match(r"^\s*(\d+)\s+\d+\s+([\d\-A-Za-z]+)", line)
+                    match = re.match(r"^\s*(\d+)\s+\d+\s+(\d{3,4}[-\dA-Za-z]*)\s+([\w\s]+)\s+U\$\s+([\d\.]+)", line)
                     if match:
                         shipped = match.group(1)
                         item_no = match.group(2)
