@@ -1,8 +1,4 @@
-PyPDF2
-camelot-py[cv]
-pdfplumber
-openpyxl
-xlrd
 streamlit
-opencv-python
-opencv-python-headless
+google-generativeai
+python-dotenv
+pdf2image
