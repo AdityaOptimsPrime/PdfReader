@@ -7,4 +7,5 @@ pandas
 PyPDF2
 pillow
 numpy
-camelot-py[cv]
+opencv-python-headless
+camelot-py[base]
