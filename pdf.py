@@ -474,6 +474,53 @@ def fuelexPdf(pdf_file):
         extracted_data['items']
     )
 
+def midwestPdf(pdf_file):
+    extracted_data = {
+        'invoice': '',
+        'date': '',
+        'po_number': '',
+        'items': []
+    }
+    
+    with pdfplumber.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            lines = text.split('\n')
+            
+            for line in lines:
+                # Extract Invoice number
+                if 'Invoice' in line:
+                    invoice_match = re.search(r'Invoice\s+(\d+)', line)
+                    if invoice_match:
+                        extracted_data['invoice'] = invoice_match.group(1)
+                
+                # Extract Date
+                if 'Date' in line:
+                    date_match = re.search(r'Date\s+(\d{2}/\d{2}/\d{4})', line)
+                    if date_match:
+                        extracted_data['date'] = date_match.group(1)
+                
+                # Extract P.O. number
+                if 'P.O. No.' in line or 'Jamie-' in line:
+                    po_match = re.search(r'Jamie-(\d{2}/\d{2}/\d{2})', line)
+                    if po_match:
+                        extracted_data['po_number'] = f"Jamie-{po_match.group(1)}"
+                
+                # Extract Item and Quantity
+                # Looking for lines that start with a number followed by item code
+                item_match = re.match(r'\s*(\d+)\s+(36[A-Z0-9]+)', line)
+                if item_match:
+                    quantity = item_match.group(1)
+                    item_code = item_match.group(2)
+                    extracted_data['items'].append((quantity, item_code))
+
+    return (
+        extracted_data['invoice'],
+        extracted_data['date'],
+        extracted_data['po_number'],
+        extracted_data['items']
+    )
+
 def extractText(filePath):
     with open(filePath,'rb') as file:
         pdfReader=pPyPDFReaderdf.PdfReader(file)
@@ -563,8 +610,36 @@ fcs = st.button("Click to add data of FCS Automotive vendor")
 gmb = st.button("Click to add data of GMB vendor")
 g2s = st.button("Click to add data of G2S vendor")
 fuelex = st.button("Click to add data of FUELEX vendor")
+midwest = st.button("Process Midwest Supply Invoices")
 
 
+if midwest:
+    deleteData()
+    pdfName = []
+    if uploadedFile is not None:
+        for uploadedFile1 in uploadedFile:
+            with open("temp.pdf", "wb") as f:
+                f.write(uploadedFile1.read())
+            try:
+                # Process the file
+                invoice_no, date, po_number, items = midwestPdf("temp.pdf")
+                # Process each item
+                for quantity, item_code in items:
+                    addToExcel(
+                        invoice_no,
+                        date,
+                        po_number,
+                        item_code,
+                        quantity
+                    )
+                    
+            except Exception as e:
+                pdfName.append(uploadedFile1.name)
+                st.error(f"Error processing {uploadedFile1.name}: {str(e)}")
+    
+    if pdfName:
+        st.write("Files with errors:", pdfName)
+    download("Midwest.csv")
 
 
 if bando:
