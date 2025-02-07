@@ -7,4 +7,3 @@ pandas
 PyPDF2
 pillow
 numpy
-re
