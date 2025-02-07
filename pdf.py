@@ -610,7 +610,7 @@ fcs = st.button("Click to add data of FCS Automotive vendor")
 gmb = st.button("Click to add data of GMB vendor")
 g2s = st.button("Click to add data of G2S vendor")
 fuelex = st.button("Click to add data of FUELEX vendor")
-midwest = st.button("Process Midwest Supply Invoices")
+midwest = st.button("Click to add data of Midwest vendor")
 
 
 if midwest:
