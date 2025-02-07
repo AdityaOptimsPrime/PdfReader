@@ -724,29 +724,30 @@ if bestBuy:
     download("BestBuy.csv")  # Changed filename to match vendor
 
 if fuelex:
-    st.write("PDFs Uploaded Successfully")
-
-    if st.button("Process Invoices"):
-        deleteData()
+    deleteData()
+    pdfName = []
+    if uploadedFile is not None:
         for uploadedFile1 in uploadedFile:
+            with open("temp.pdf", "wb") as f:
+                f.write(uploadedFile1.read())
             try:
                 # Process the file
-                invoice_no, date, po_number, items = fuelexPdf(uploadedFile1)
-                
+                invoice_no, date, po_number, items = fuelexPdf("temp.pdf")
                 
                 # Process each item
-                for item in items:
+                for ship_qty, part_number in items:
                     addToExcel(
                         invoice_no,
                         date,
                         po_number,
-                        item['product_code'],
-                        item['quantity']
+                        part_number,
+                        ship_qty
                     )
-                    # Debug output
-                    st.write(f"Added: Product: {item['product_code']}, Qty: {item['quantity']}")
                 
             except Exception as e:
+                pdfName.append(uploadedFile1.name)
                 st.error(f"Error processing {uploadedFile1.name}: {str(e)}")
-        
-        download("Fuelex.csv")
+    
+    if pdfName:
+        st.write("Files with errors:", pdfName)
+    download("Fuelex.csv")
