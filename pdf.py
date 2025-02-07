@@ -405,6 +405,75 @@ def g2sPdf2(file_obj):
 
     return item_dict
 
+def fuelexPdf(pdf_file):
+    extracted_data = {
+        'invoice': '',
+        'date': '',
+        'po_number': '',
+        'items': []
+    }
+    
+    with pdfp.open(pdf_file) as pdf:
+        for page in pdf.pages:
+            # Extract tables from the page
+            tables = page.extract_tables()
+            
+            # Process tables for invoice and date
+            for table in tables:
+                for row in table:
+                    # Convert all elements to strings and clean them
+                    row = [str(cell).strip() if cell is not None else '' for cell in row]
+                    row_text = ' '.join(row)
+                    
+                    # Look for DATE and INVOICE in the same row
+                    if 'DATE' in row_text and 'INVOICE' in row_text:
+                        # The next row should contain the actual values
+                        date_idx = row.index('DATE')
+                        invoice_idx = row.index('INVOICE')
+                        
+                        # Get the next row
+                        next_row_idx = table.index(row) + 1
+                        if next_row_idx < len(table):
+                            next_row = table[next_row_idx]
+                            next_row = [str(cell).strip() if cell is not None else '' for cell in next_row]
+                            
+                            # Extract date and invoice
+                            if len(next_row) > date_idx:
+                                extracted_data['date'] = next_row[date_idx]
+                            if len(next_row) > invoice_idx:
+                                extracted_data['invoice'] = next_row[invoice_idx]
+            
+            # Extract text for other fields
+            text = page.extract_text()
+            lines = text.split('\n')
+            
+            for line in lines:
+                # Extract P.O. number
+                if 'P.O.' in line and not extracted_data['po_number']:
+                    po_match = re.search(r'P\.O\.\s*:\s*(\w+)', line)
+                    if po_match:
+                        extracted_data['po_number'] = po_match.group(1)
+                
+                # Extract Product and Quantity
+                product_match = re.match(r'\s*(\d{6})\s+(.*?)\s+(\d+\.?\d*)\s+CS', line)
+                if product_match:
+                    product_code = product_match.group(1)
+                    quantity = product_match.group(3)
+                    extracted_data['items'].append({
+                        'product_code': product_code,
+                        'quantity': quantity
+                    })
+
+    # Debug print
+    st.write("Extracted Raw Data:", extracted_data)
+
+    return (
+        extracted_data['invoice'],
+        extracted_data['date'],
+        extracted_data['po_number'],
+        extracted_data['items']
+    )
+
 def extractText(filePath):
     with open(filePath,'rb') as file:
         pdfReader=pPyPDFReaderdf.PdfReader(file)
@@ -493,6 +562,7 @@ denso = st.button("Click to add data of DENSO vendor")
 fcs = st.button("Click to add data of FCS Automotive vendor")
 gmb = st.button("Click to add data of GMB vendor")
 g2s = st.button("Click to add data of G2S vendor")
+fuelex = st.button("Click to add data of FUELEX vendor")
 
 
 
@@ -652,3 +722,31 @@ if bestBuy:
     if pdfName:
         st.write("Files with errors:", pdfName)
     download("BestBuy.csv")  # Changed filename to match vendor
+
+if fuelex:
+    st.write("PDFs Uploaded Successfully")
+
+    if st.button("Process Invoices"):
+        deleteData()
+        for uploadedFile1 in uploadedFile:
+            try:
+                # Process the file
+                invoice_no, date, po_number, items = fuelexPdf(uploadedFile1)
+                
+                
+                # Process each item
+                for item in items:
+                    addToExcel(
+                        invoice_no,
+                        date,
+                        po_number,
+                        item['product_code'],
+                        item['quantity']
+                    )
+                    # Debug output
+                    st.write(f"Added: Product: {item['product_code']}, Qty: {item['quantity']}")
+                
+            except Exception as e:
+                st.error(f"Error processing {uploadedFile1.name}: {str(e)}")
+        
+        download("Fuelex.csv")
