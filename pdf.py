@@ -210,9 +210,10 @@ def bestBuyPdf(filePath):
             lines = text.split('\n')
             
             for line in lines:
-                match = re.match(r"^\s*(\d+)\s+\d+\s+[A-Z]+\s+([A-Z0-9]+)", line)
+                # Updated regex to capture Ship Qty (second number) instead of Order Qty (first number)
+                match = re.match(r"^\s*\d+\s+(\d+)\s+[A-Z]+\s+([A-Z0-9]+)", line)
                 if match:
-                    ship_qty = match.group(1)
+                    ship_qty = match.group(1)  # Changed to capture second number (Ship Qty)
                     part_number = match.group(2)
                     shipPartList.append((ship_qty, part_number))
         
