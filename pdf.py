@@ -217,27 +217,34 @@ def bestBuyPdf(filePath):
                     shipPartList.append((ship_qty, part_number))
         
     with open(filePath,'rb') as file:
-        pdfReader=pPyPDFReaderdf(file)
-        pageNumber= len(pdfReader.pages)
-        text=""
+        pdfReader = pPyPDFReaderdf.PdfReader(file)  # Make sure this is the correct import
+        pageNumber = len(pdfReader.pages)
+        text = ""
         for page_num in range(pageNumber):
-            page=pdfReader.pages[page_num]
-            text+=page.extract_text()
+            page = pdfReader.pages[page_num]
+            text += page.extract_text()
 
-    poNoPattern = r"P.O.No:\s*(\d{9})"
+    poNoPattern = r"P.O.No:\s*(\d+)"
     invoiceDatePattern = r" Invoice Date:\s*((?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)/\d{1,2}/\d{4})"
     invoiceNoPattern = r"Invoice No:\s*(\d+)"
    
     poNo = re.search(poNoPattern, text)
     invoiceDate = re.search(invoiceDatePattern, text)
     invoiceNo = re.search(invoiceNoPattern, text)
-    if poNo and invoiceDate and invoiceNo:
-        poNo = poNo.group(1)
-        invoiceDate = invoiceDate.group(1)
-        invoiceNo=invoiceNo.group(1)  
-        return poNo, invoiceDate,invoiceNo,shipPartList
+    st.write("poNo: ",poNo)
+    st.write("invoiceDate: ",invoiceDate)
+    st.write("invoiceNo: ",invoiceNo)
+    st.write("shipPartList: ",shipPartList)
+    if poNo or invoiceDate or invoiceNo:
+        if poNo:
+            poNo = poNo.group(1)
+        if invoiceDate:
+            invoiceDate = invoiceDate.group(1)
+        if invoiceNo:
+            invoiceNo = invoiceNo.group(1)  
+        return poNo, invoiceDate, invoiceNo, shipPartList
     else:
-        return None, None,None
+        return None, None, None, []
 
 
 def densoPdf(filePath):
@@ -368,10 +375,6 @@ def g2sPdf(filePath1):
                 po_match = re.search(r"CONTACT\s+([A-Z\-]+)", text)
                 if po_match:
                     customer_po = po_match.group(1).strip()
-            
-            table_matches = re.findall(r"(\b[A-Z0-9-]+:\s+[A-Z0-9]+\b).+?(\d+)\s+EA", text)
-            for item, qty in table_matches:
-                items_dict[item] = int(qty)
 
     tables = camelot.read_pdf(filepath=filePath1, flavor='stream', pages='all')
     for i,table in enumerate(tables):
@@ -379,7 +382,27 @@ def g2sPdf(filePath1):
         if i==0:
             invoiceNo=df.iloc[1,2]
             date=df.iloc[2,2]
-    return invoiceNo,date,customer_po,items_dict
+    return invoiceNo,date,customer_po
+
+def g2sPdf2(file_obj):
+    item_dict = {}
+    
+    with pdfp.open(file_obj) as pdf:
+        for page in pdf.pages:
+            text = page.extract_text()
+            lines = text.split('\n')
+            
+            for line in lines:
+                item_match = re.match(r'^\s*(\d+)\s+([A-Z]+-[A-Z0-9]+:?.*?)\s+(\d+)\s+EA', line)
+                if item_match:
+                    item_num = item_match.group(1)
+                    item_code = item_match.group(2).strip()
+                    quantity = item_match.group(3)
+                    
+                    # Add to dictionary with item_code as key and quantity as value
+                    item_dict[item_code] = quantity
+
+    return item_dict
 
 def extractText(filePath):
     with open(filePath,'rb') as file:
@@ -429,16 +452,6 @@ def addToExcel (*args):
     sheet = workbook.active
     sheet.append(args)
     workbook.save("Data.xlsx")
-    # conn = st.connection("gsheets", type=GSheetsConnection)
-    # data = conn.read(spreadsheet=url)
-    # new_row = pd.DataFrame([args], columns=data.columns)
-    
-    # Concatenate the new row with the existing data
-    # updated_data = pd.concat([data, new_row], ignore_index=True)
-    
-    # Write the updated data back to the Google Sheet
-    # conn.update(data=updated_data)
-    # st.dataframe(data)
 
 def download(filename):
     df=pd.read_excel("Data.xlsx")
@@ -523,21 +536,21 @@ if apt:
 
 
 
-if bestBuy:
-    deleteData()
-    pdfName=[]
-    if uploadedFile is not None:
-            for uploadedFile1 in uploadedFile:
-                with open("temp.pdf","wb") as f:
-                    f.write(uploadedFile1.read())
-                try:
-                    poNo, invoiceDate,invoiceNo,shipPartList=bestBuyPdf("temp.pdf")
-                    for ship_qty, part_number in shipPartList:
-                        addToExcel(poNo, invoiceDate,invoiceNo, ship_qty, part_number)
-                except:
-                    pdfName.append(uploadedFile1.name)
-    download("BestBuy.csv")
-    st.write(pdfName)
+# if bestBuy:
+#     deleteData()
+#     pdfName=[]
+#     if uploadedFile is not None:
+#             for uploadedFile1 in uploadedFile:
+#                 with open("temp.pdf","wb") as f:
+#                     f.write(uploadedFile1.read())
+#                 try:
+#                     poNo, invoiceDate,invoiceNo,shipPartList=bestBuyPdf("temp.pdf")
+#                     for ship_qty, part_number in shipPartList:
+#                         addToExcel(poNo, invoiceDate,invoiceNo, ship_qty, part_number)
+#                 except:
+#                     pdfName.append(uploadedFile1.name)
+#     download("BestBuy.csv")
+#     st.write(pdfName)
 
 
 if denso:
@@ -600,11 +613,41 @@ if g2s:
             with open("temp.pdf", "wb") as f:
                 f.write(uploadedFile1.read())
             try:
-                invoiceNo,invoiceDate,PONumber,itemMap=g2sPdf("temp.pdf")
-
+                invoiceNo,invoiceDate,PONumber=g2sPdf("temp.pdf")
+                itemMap=g2sPdf2("temp.pdf")
+                st.write("invoiceNo: ",invoiceNo)
+                st.write("invoiceDate: ",invoiceDate)
+                st.write("PONumber: ",PONumber)
+                st.write("itemMap: ",itemMap)
                 for key, value in itemMap.items():
+                    st.write("Key: ",key)
+                    st.write("Value: ",value)
                     addToExcel(invoiceNo,invoiceDate,PONumber, key, value)
             except:
-                pdfName.append(uploadedFile.name)
+                pdfName.append(uploadedFile1.name)
     st.write(pdfName)
     download("g2s.csv")
+
+if bestBuy:
+    deleteData()
+    pdfName = []
+    if uploadedFile is not None:
+        for uploadedFile1 in uploadedFile:
+            with open("temp.pdf", "wb") as f:
+                f.write(uploadedFile1.read())
+            try:
+                invoice_no, invoice_date, po_number, items = bestBuyPdf("temp.pdf")
+                
+                # Process each item
+                for ship_qty, part_number in items:  # Changed this line
+                    addToExcel(invoice_no, invoice_date, po_number, part_number, ship_qty)
+                    
+                    # For debugging
+                    # st.write(f"Added: Invoice: {invoice_no}, Date: {invoice_date}, PO: {po_number}, Part: {part_number}, Qty: {ship_qty}")
+            except Exception as e:
+                pdfName.append(uploadedFile1.name)
+                st.error(f"Error processing {uploadedFile1.name}: {str(e)}")
+    
+    if pdfName:
+        st.write("Files with errors:", pdfName)
+    download("BestBuy.csv")  # Changed filename to match vendor

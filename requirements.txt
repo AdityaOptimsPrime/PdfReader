@@ -1,4 +1,10 @@
 streamlit
-google-generativeai
 python-dotenv
 pdf2image
+pdfplumber
+openpyxl
+pandas
+PyPDF2
+pillow
+numpy
+re
