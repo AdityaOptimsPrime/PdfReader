@@ -8,4 +8,5 @@ PyPDF2
 pillow
 numpy
 opencv-python-headless
+camelot-py[base]
 camelot-py[cv]
